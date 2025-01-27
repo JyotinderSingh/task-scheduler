@@ -16,26 +16,23 @@ const (
 )
 
 func GetDBConnectionString() string {
-	var missingEnvVars []string
 
-	checkEnvVar := func(envVar, envVarName string) {
-		if envVar == "" {
-			missingEnvVars = append(missingEnvVars, envVarName)
-		}
+	// set the default values here
+	requiredEnvVars := map[string]string{
+		"POSTGRES_USER":     "",
+		"POSTGRES_PASSWORD": "",
+		"POSTGRES_DB":       "",
+		"POSTGRES_HOST":     "localhost",
 	}
 
-	dbUser := os.Getenv("POSTGRES_USER")
-	checkEnvVar(dbUser, "POSTGRES_USER")
-
-	dbPassword := os.Getenv("POSTGRES_PASSWORD")
-	checkEnvVar(dbPassword, "POSTGRES_PASSWORD")
-
-	dbName := os.Getenv("POSTGRES_DB")
-	checkEnvVar(dbName, "POSTGRES_DB")
-
-	dbHost := os.Getenv("POSTGRES_HOST")
-	if dbHost == "" {
-		dbHost = "localhost"
+	var missingEnvVars []string
+	// set the value from the environement here
+	for envVarName, _ := range requiredEnvVars {
+		envVarValue := os.Getenv(envVarName)
+		if envVarValue == "" {
+			missingEnvVars = append(missingEnvVars, envVarName)
+		}
+		requiredEnvVars[envVarName] = envVarValue
 	}
 
 	if len(missingEnvVars) > 0 {
@@ -43,7 +40,12 @@ func GetDBConnectionString() string {
 			strings.Join(missingEnvVars, ", "))
 	}
 
-	return fmt.Sprintf("postgres://%s:%s@%s:5432/%s", dbUser, dbPassword, dbHost, dbName)
+	return fmt.Sprintf("postgres://%s:%s@%s:5432/%s",
+		requiredEnvVars["POSTGRES_USER"],
+		requiredEnvVars["POSTGRES_PASSWORD"],
+		requiredEnvVars["POSTGRES_HOST"],
+		requiredEnvVars["POSTGRES_DB"])
+
 }
 
 func ConnectToDatabase(ctx context.Context, dbConnectionString string) (*pgxpool.Pool, error) {
